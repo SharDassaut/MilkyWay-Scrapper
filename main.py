@@ -1,7 +1,8 @@
 import httpx
 import time
+import random
 from selectolax.parser import HTMLParser 
-
+from urlllib.parse import urljoin
 
 ############################################################################################
 ################################   Obtener html    #########################################
@@ -67,21 +68,25 @@ def getProductsInfo(products):
         }
         print(item)
 
-
 def checkIfEmpty(html):
     return html.css_matches("h2.title.title--primary")
 
 def scrapProducts():
     url = "https://www.milkywayediciones.com/collections/all?page="
     for x in range(1, 100):
-        print(x)
+        print("Pidiendo datos de la página:",x)
         html = getHTML(url+str(x))
-        if html is False or checkIfEmpty(html) :
+
+        if html is False:
             print(f"No se pudo pedir la página {x}")
-            break
+            continue
+        elif checkIfEmpty(html):
+            print("Se ha llegado al final del catálogo")
+            break    
+
         products = getProdutcs(html)
         getProductsInfo(products)
-        time.sleep(1)
+        time.sleep(random.uniform(1,3))
 
 ############################################################################################
 ########################################## MAIN ###########################################
