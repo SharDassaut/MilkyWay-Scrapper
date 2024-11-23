@@ -5,6 +5,8 @@ from product import Product
 from urllib.parse import urljoin
 from selectolax.parser import HTMLParser
 
+DOMAIN_URL = "https://www.milkywayediciones.com"
+
 ######################################################
 # Dado un url devuelve un objeto html de selectolax  #
 #   sobre el cúal se pueden aplicar los filtrados    #
@@ -49,24 +51,9 @@ def getHTML(url):
 #       Receives url to fix them       #
 ########################################
 
-def urlFixer(url,baseUrl):
-    return urljoin(baseUrl,url)
+def urlFixer(url):
+    return urljoin(DOMAIN_URL,url)
 
-
-
-#################################################################
-# receives selectolax html of the catalogue page and retreives  #
-#              all the products of the object                   #
-#################################################################
-
-def getProductsUrlFromCataloguePage(html, baseUrl):
-    html = (html.css(".product-card-list .product-card"))
-    for node in html:
-        node = cssFirstAtributeSelector(node, 'a', "href")
-        if node != "None":
-            yield urlFixer(node,baseUrl)
-        else:
-            yield node
 
 def cssFirstTextSelector(html, selector):
     try:
@@ -80,27 +67,55 @@ def cssFirstAtributeSelector(html, selector,attr):
     except AttributeError as err:
         return "None"
 
+# Get the title and volume of the product
+# if it is a oneshot volume will be none
+def getProductTitleAndVolume(url):
+    url = url.split("/")[-1].split("-")
+    if url[-2] == "vol":
+        return(" ".join(url[:-2]),".".join(url[-2:]))
+    else:
+        return (" ".join(url),"None")
+
+
 # For all the data that can be scraped keep it 
 # I will implement it later
 
-
 def getProductInfo(url):
     html = getHTML(url)
-    coverUrl = cssFirstAtributeSelector(html,"img.product-main--img","src")
-    print("coverUrl: "+ coverUrl)
+    html = html.css_first("section.section.section-product")
+    title,volume = getProductTitleAndVolume(url)
+    coverUrl = urlFixer(cssFirstAtributeSelector(html,"img.product-main--img","src"))
+    author = cssFirstTextSelector(html,"a.product-meta-link h3")
+    price = cssFirstTextSelector(html,"div.product-main__price")
+
+#################################################################
+# receives selectolax html of the catalogue page and retreives  #
+#              all the products of the object                   #
+#################################################################
+
+def getProductsUrlFromCataloguePage(html, baseUrl):
+    html = (html.css(".product-card-list .product-card"))
+    for node in html:
+        url= cssFirstAtributeSelector(node, 'a', "href")
+        if url != "None":
+            yield urlFixer(url)
+        else:
+            yield url
 
 def main():
     
     url = "https://www.milkywayediciones.com/collections/all?page="
     html = getHTML(url)
     if (not (isinstance(html,int))):
+        # implement checking if url in None
         urlGenerator = getProductsUrlFromCataloguePage(html,"https://www.milkywayediciones.com")
         for productUrl in urlGenerator:
-            getProductInfo(productUrl)
-
+          getProductInfo(productUrl)
+        
     else:
         print("Programa cerrado")
         exit()
+    
 
 if __name__ == "__main__":
     main()
