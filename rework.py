@@ -2,8 +2,8 @@ import httpx
 import time
 import random
 from product import Product
+from urllib.parse import urljoin
 from selectolax.parser import HTMLParser
-
 
 ######################################################
 # Dado un url devuelve un objeto html de selectolax  #
@@ -39,21 +39,14 @@ def getHTML(url):
             print(f"Error inesperado: {e}")
             return -4
         
-        time.sleep(random.randint(1,3))
+        time.sleep(2**count)
 
 ######################################################
 ############## Utilidades de arreglo #################
 ######################################################
 
 def urlFixer(url,baseUrl):
-    if(url.startswith("://")):
-        return "https"+url
-    elif(url.startswith("//")):
-        return "https:"+url
-    elif(url.startswith("/")):
-        return baseUrl+url
-    else:
-        return url
+    return urljoin(baseUrl,url)
 
 #################################################################
 # receives selectolax html of the catalogue page and retreives  #
@@ -81,12 +74,13 @@ def cssSelector(html, selector):
 # I will implement it later
 
 def getProductInfo(j):
-    pass
+    for i in j:
+        print(i)
 
 def main():
     
-    url = "://www.milkywayediciones.com/collections/all?page="
-    html = getHTML(urlFixer(url,"https://www.milkywayediciones.com/collections/all?page="))
+    url = "https://www.milkywayediciones.com/collections/all?page="
+    html = getHTML(url)
     if (not (isinstance(html,int))):
         getProductInfo(getProductsUrlFromCataloguePage(html,"https://www.milkywayediciones.com"))
         
