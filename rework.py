@@ -38,15 +38,21 @@ def getHTML(url):
         except Exception as e:
             print(f"Error inesperado: {e}")
             return -4
-        
+        count += 1
         time.sleep(2**count)
 
 ######################################################
 ############## Utilidades de arreglo #################
 ######################################################
 
+########################################
+#       Receives url to fix them       #
+########################################
+
 def urlFixer(url,baseUrl):
     return urljoin(baseUrl,url)
+
+
 
 #################################################################
 # receives selectolax html of the catalogue page and retreives  #
@@ -56,44 +62,45 @@ def urlFixer(url,baseUrl):
 def getProductsUrlFromCataloguePage(html, baseUrl):
     html = (html.css(".product-card-list .product-card"))
     for node in html:
-        yield urlFixer(baseUrl+node.css_first('a').attributes['href'],baseUrl)
-        
-########################################
-# Receives the url of the product
-#
-########################################
+        node = cssFirstAtributeSelector(node, 'a', "href")
+        if node != "None":
+            yield urlFixer(node,baseUrl)
+        else:
+            yield node
 
-def cssSelector(html, selector):
+def cssFirstTextSelector(html, selector):
     try:
         return html.css_first(selector).text().strip()
     except AttributeError as err:
         return "None"
-
+    
+def cssFirstAtributeSelector(html, selector,attr):
+    try:
+        return html.css_first(selector).attributes[attr]
+    except AttributeError as err:
+        return "None"
 
 # For all the data that can be scraped keep it 
 # I will implement it later
 
-def getProductInfo(j):
-    for i in j:
-        print(i)
+
+def getProductInfo(url):
+    html = getHTML(url)
+    coverUrl = cssFirstAtributeSelector(html,"img.product-main--img","src")
+    print("coverUrl: "+ coverUrl)
 
 def main():
     
     url = "https://www.milkywayediciones.com/collections/all?page="
     html = getHTML(url)
     if (not (isinstance(html,int))):
-        getProductInfo(getProductsUrlFromCataloguePage(html,"https://www.milkywayediciones.com"))
-        
-    else:
-        if html == -1:
-            pass
-        elif html == -2:
-            pass
-        elif html == -3:
-            pass
-        else:
-            pass
+        urlGenerator = getProductsUrlFromCataloguePage(html,"https://www.milkywayediciones.com")
+        for productUrl in urlGenerator:
+            getProductInfo(productUrl)
 
+    else:
+        print("Programa cerrado")
+        exit()
 
 if __name__ == "__main__":
     main()
