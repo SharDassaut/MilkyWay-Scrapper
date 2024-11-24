@@ -61,6 +61,12 @@ def cssFirstTextSelector(html, selector):
     except AttributeError as err:
         return "None"
     
+def cssTextSelector(html,selector):
+    try:
+        return html.css(selector)
+    except AttributeError as err:
+        return "None"
+    
 def cssFirstAtributeSelector(html, selector,attr):
     try:
         return html.css_first(selector).attributes[attr]
@@ -76,17 +82,42 @@ def getProductTitleAndVolume(url):
     else:
         return (" ".join(url),"None")
 
+def getProductAuthors(html):
+    strs = cssTextSelector(html,"div.product-main__author a h3")
+    authors=[]
+    for i in strs:
+       authors.append(i.text())
+    return authors
+
+
+def getExtraInfo(html):
+    extra_info = cssTextSelector(html,"div.product-main__description p")
+    extra_info = extra_info[-1].text(deep=True, separator =":", strip=True)
+    extra_info = extra_info.split(":")
+    while extra_info.count(""):
+        extra_info.remove("")
+    def_extra_info = []
+    for i in range(1,len(extra_info),2):
+        def_extra_info.append(extra_info[i])
+    return def_extra_info
 
 # For all the data that can be scraped keep it 
-# I will implement it later
+# get plus info and ¿tags?
 
 def getProductInfo(url):
     html = getHTML(url)
-    html = html.css_first("section.section.section-product")
-    title,volume = getProductTitleAndVolume(url)
-    coverUrl = urlFixer(cssFirstAtributeSelector(html,"img.product-main--img","src"))
-    author = cssFirstTextSelector(html,"a.product-meta-link h3")
-    price = cssFirstTextSelector(html,"div.product-main__price")
+    if(not (isinstance(html,int))):
+        html = html.css_first("section.section.section-product")
+
+        title,volume = getProductTitleAndVolume(url)
+        author = getProductAuthors(html)
+        price = cssFirstTextSelector(html,"div.product-main__price")
+        coverUrl = urlFixer(cssFirstAtributeSelector(html,"img.product-main--img","src"))
+        originalTitle, format, size, pageNumber, color, isbn = getExtraInfo(html)
+
+
+    else:
+        print("No se ha podido recoger los datos del url:",url)
 
 #################################################################
 # receives selectolax html of the catalogue page and retreives  #
@@ -104,7 +135,7 @@ def getProductsUrlFromCataloguePage(html, baseUrl):
 
 def main():
     
-    url = "https://www.milkywayediciones.com/collections/all?page="
+    '''url = "https://www.milkywayediciones.com/collections/all?page="
     html = getHTML(url)
     if (not (isinstance(html,int))):
         # implement checking if url in None
@@ -114,7 +145,9 @@ def main():
         
     else:
         print("Programa cerrado")
-        exit()
+        exit()'''
+    
+    getProductInfo("https://www.milkywayediciones.com/products/akane-banashi-vol-6")
     
 
 if __name__ == "__main__":
