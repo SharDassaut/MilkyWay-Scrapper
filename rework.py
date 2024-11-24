@@ -1,6 +1,5 @@
 import httpx
-import time
-import random
+import asyncio
 from product import Product
 from urllib.parse import urljoin
 from selectolax.parser import HTMLParser
@@ -11,36 +10,37 @@ DOMAIN_URL = "https://www.milkywayediciones.com"
 # Given an url it returns the selectolax html object #
 #######################################################
 
-def getHTML(url):
-    flag = True
-    count =0
-    while(flag):
-        header={'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        }
+async def getHTML(url, retries=3):
 
-        try:
-            r = httpx.get(url, headers=header)
-            r.raise_for_status()
-            return HTMLParser(r.text)
-        except httpx.HTTPStatusError as err:
-            print("Occurio este error al pedir el url ,error: ", r.status_code)
-            return -1
-        except TimeoutError:
-            print("TimeOut error: ",count)
-            if(count == 3):
-                flag = False
-                print("No se pudo conectar al servidor")
-                return -2
-        except httpx.RequestError as e:
-            print(f"Error de conexión: {e}")
-            return -3
-        except Exception as e:
-            print(f"Error inesperado: {e}")
-            return -4
-        count += 1
-        time.sleep(2**count)
+    header={'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            }
+
+    async with httpx.AsyncClient() as client:
+        for i in range(1,retries):
+            try:
+                r = await client.get(url, headers=header, timeout=10.0)
+                r.raise_for_status()
+                return HTMLParser(r.text) # Return parser HTML
+            except httpx.HTTPStatusError as err:
+                print("Occurio este error al pedir el url ,error: ", r.status_code)
+                return None
+            except httpx.TimeoutException:
+                print("TimeOut error: ",i)
+                if(i == 3):
+                    flag = False
+                    print("No se pudo conectar al servidor")
+                    return None
+            except httpx.RequestError as e:
+                print(f"Error de conexión: {e}")
+                return None
+            except Exception as e:
+                print(f"Error inesperado: {e}")
+                return None
+            
+            await asyncio.sleep(2**i)
+            i +=1
 
 ######################################################
 #################### Utilities #######################
@@ -75,8 +75,9 @@ def cssFirstAtributeSelector(html, selector,attr):
     except AttributeError as err:
         return "None"
 
-# Get the title and volume of the product
-# if it is a oneshot volume will be none
+######################################################
+##################### Scraping #######################
+######################################################
 
 def getProductTitleAndVolume(url):
     url = url.split("/")[-1].split("-")
@@ -120,11 +121,12 @@ def filterTags(tags, title, author):
             tags.remove(tag)
     return tags
 
-# For all the data that can be scraped keep it 
-# ¿tags?
+##################################
+#     Main scraping function     #
+##################################
 
-def getProductInfo(url):
-    html = getHTML(url)
+async def getProductInfo(url):
+    html = await getHTML(url,3)
     if(not (isinstance(html,int))):
         html = html.css_first("section.section.section-product")
 
@@ -132,11 +134,11 @@ def getProductInfo(url):
         authors = getProductAuthors(html)
         price = cssFirstTextSelector(html,"div.product-main__price")
         cover_url = urlFixer(cssFirstAtributeSelector(html,"img.product-main--img","src"))
-        tags = filterTags(getTags(html),title,author)
+        tags = filterTags(getTags(html),title,authors)
         
         original_title, format, size, page_number, color, isbn = getExtraInfo(html)
         
-        yield Product(title,volume,authors,price,price,cover_url,tags,original_title,format,size,page_number,color,isbn)
+        return Product(title,volume,authors,price,cover_url,tags,original_title,format,size,page_number,color,isbn)
     else:
         print("No se ha podido recoger los datos del url:",url)
         return None
@@ -146,7 +148,7 @@ def getProductInfo(url):
 #              all the products of the object                   #
 #################################################################
 
-def getProductsUrlFromCataloguePage(html, baseUrl):
+def getProductsUrlFromCataloguePage(html):
     html = (html.css(".product-card-list .product-card"))
     for node in html:
         url= cssFirstAtributeSelector(node, 'a', "href")
@@ -155,24 +157,25 @@ def getProductsUrlFromCataloguePage(html, baseUrl):
         else:
             yield None
 
-def main():
+async def main():
 
     url = "https://www.milkywayediciones.com/collections/all?page="
-    html = getHTML(url)
-    if (not (isinstance(html,int))):
-        urlGenerator = getProductsUrlFromCataloguePage(html,"https://www.milkywayediciones.com")
+    html = await getHTML(url,3)
+    if html != None:
+        urlGenerator = getProductsUrlFromCataloguePage(html)
         for productUrl in urlGenerator:
             if (productUrl != None):
-                Catalogue = getProductInfo(productUrl)
+                 print( await getProductInfo(productUrl))
             else:
                 pass
+        
     else:
         print("Programa cerrado")
         exit()
     
-def test():
+async def test():
     getProductInfo("https://www.milkywayediciones.com/products/tatsuyuki-ooyamato-lider-de-la-cuarta-generacion")
 
 if __name__ == "__main__":
-    main()
-    #test()
+    asyncio.run(main())
+    #asyncio.run(test())
