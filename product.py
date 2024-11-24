@@ -1,19 +1,16 @@
+from dataclasses import dataclass, asdict
+
+@dataclass
 class Product:
-    def __init__(self, title, volume, author,price, coverUrl):
-        self.title = title
-        self.volume = volume
-        self.author = author
-        self.price = price
-        self.coverUrl = coverUrl
-
-    def __str__(self):
-        return f"{self.title} {self.volume}"
-
-    def to_dict(self):
-        return {
-            "title": self.title,
-            "volume":self.volume,
-            "author":self.author,
-            "price": self.price,
-            "coverUrl": self.coverUrl
-        }
+    title: str
+    volume: str
+    authors: list
+    price: str
+    cover_url: str
+    tags: list
+    original_title: str
+    format: str
+    size: str
+    page_number: str
+    color: str
+    isbn: str

@@ -104,14 +104,14 @@ def getExtraInfo(html):
     return def_extra_info
 
 def getTags(html):
-    tagsNode = cssTextSelector(html,"div.product-main__tags a")
-    if not(tagsNode == "None"):
+    tags_node = cssTextSelector(html,"div.product-main__tags a")
+    if not(tags_node == "None"):
         tags =[]
-        for tagNode in tagsNode:
-            tags.append(tagNode.text(strip = True)) 
+        for tag_node in tags_node:
+            tags.append(tag_node.text(strip = True)) 
         return tags 
     else:
-        return tagsNode
+        return tags_node
 
 
 def filterTags(tags, title, author):
@@ -129,15 +129,17 @@ def getProductInfo(url):
         html = html.css_first("section.section.section-product")
 
         title,volume = getProductTitleAndVolume(url)
-        author = getProductAuthors(html)
+        authors = getProductAuthors(html)
         price = cssFirstTextSelector(html,"div.product-main__price")
-        coverUrl = urlFixer(cssFirstAtributeSelector(html,"img.product-main--img","src"))
-        originalTitle, format, size, pageNumber, color, isbn = getExtraInfo(html)
+        cover_url = urlFixer(cssFirstAtributeSelector(html,"img.product-main--img","src"))
         tags = filterTags(getTags(html),title,author)
-
-
+        
+        original_title, format, size, page_number, color, isbn = getExtraInfo(html)
+        
+        yield Product(title,volume,authors,price,price,cover_url,tags,original_title,format,size,page_number,color,isbn)
     else:
         print("No se ha podido recoger los datos del url:",url)
+        return None
 
 #################################################################
 # receives selectolax html of the catalogue page and retreives  #
@@ -151,28 +153,26 @@ def getProductsUrlFromCataloguePage(html, baseUrl):
         if url != "None":
             yield urlFixer(url)
         else:
-            yield url
-
-
-def test():
-    getProductInfo("https://www.milkywayediciones.com/products/tatsuyuki-ooyamato-lider-de-la-cuarta-generacion")
+            yield None
 
 def main():
 
     url = "https://www.milkywayediciones.com/collections/all?page="
     html = getHTML(url)
     if (not (isinstance(html,int))):
-        # implement checking if url in None
         urlGenerator = getProductsUrlFromCataloguePage(html,"https://www.milkywayediciones.com")
         for productUrl in urlGenerator:
-          getProductInfo(productUrl)
-        
+            if (productUrl != None):
+                Catalogue = getProductInfo(productUrl)
+            else:
+                pass
     else:
         print("Programa cerrado")
         exit()
     
-    
+def test():
+    getProductInfo("https://www.milkywayediciones.com/products/tatsuyuki-ooyamato-lider-de-la-cuarta-generacion")
 
 if __name__ == "__main__":
-    #main()
-    test()
+    main()
+    #test()
