@@ -7,10 +7,9 @@ from selectolax.parser import HTMLParser
 
 DOMAIN_URL = "https://www.milkywayediciones.com"
 
-######################################################
-# Dado un url devuelve un objeto html de selectolax  #
-#   sobre el cúal se pueden aplicar los filtrados    #
-######################################################
+#######################################################
+# Given an url it returns the selectolax html object #
+#######################################################
 
 def getHTML(url):
     flag = True
@@ -44,7 +43,7 @@ def getHTML(url):
         time.sleep(2**count)
 
 ######################################################
-############## Utilidades de arreglo #################
+#################### Utilities #######################
 ######################################################
 
 ########################################
@@ -54,6 +53,9 @@ def getHTML(url):
 def urlFixer(url):
     return urljoin(DOMAIN_URL,url)
 
+##################################
+# Better css selection handeling #
+##################################
 
 def cssFirstTextSelector(html, selector):
     try:
@@ -75,20 +77,20 @@ def cssFirstAtributeSelector(html, selector,attr):
 
 # Get the title and volume of the product
 # if it is a oneshot volume will be none
+
 def getProductTitleAndVolume(url):
     url = url.split("/")[-1].split("-")
     if url[-2] == "vol":
         return(" ".join(url[:-2]),".".join(url[-2:]))
     else:
-        return (" ".join(url),"None")
+        return (" ".join(url),"oneshot")
 
 def getProductAuthors(html):
     strs = cssTextSelector(html,"div.product-main__author a h3")
     authors=[]
     for i in strs:
-       authors.append(i.text())
+       authors.append(i.text().lower())
     return authors
-
 
 def getExtraInfo(html):
     extra_info = cssTextSelector(html,"div.product-main__description p")
@@ -101,8 +103,25 @@ def getExtraInfo(html):
         def_extra_info.append(extra_info[i])
     return def_extra_info
 
+def getTags(html):
+    tagsNode = cssTextSelector(html,"div.product-main__tags a")
+    if not(tagsNode == "None"):
+        tags =[]
+        for tagNode in tagsNode:
+            tags.append(tagNode.text(strip = True)) 
+        return tags 
+    else:
+        return tagsNode
+
+
+def filterTags(tags, title, author):
+    for tag in tags:
+        if tag.lower() == title.lower() or tag.lower() in author:
+            tags.remove(tag)
+    return tags
+
 # For all the data that can be scraped keep it 
-# get plus info and ¿tags?
+# ¿tags?
 
 def getProductInfo(url):
     html = getHTML(url)
@@ -114,6 +133,7 @@ def getProductInfo(url):
         price = cssFirstTextSelector(html,"div.product-main__price")
         coverUrl = urlFixer(cssFirstAtributeSelector(html,"img.product-main--img","src"))
         originalTitle, format, size, pageNumber, color, isbn = getExtraInfo(html)
+        tags = filterTags(getTags(html),title,author)
 
 
     else:
@@ -133,9 +153,13 @@ def getProductsUrlFromCataloguePage(html, baseUrl):
         else:
             yield url
 
+
+def test():
+    getProductInfo("https://www.milkywayediciones.com/products/tatsuyuki-ooyamato-lider-de-la-cuarta-generacion")
+
 def main():
-    
-    '''url = "https://www.milkywayediciones.com/collections/all?page="
+
+    url = "https://www.milkywayediciones.com/collections/all?page="
     html = getHTML(url)
     if (not (isinstance(html,int))):
         # implement checking if url in None
@@ -145,10 +169,10 @@ def main():
         
     else:
         print("Programa cerrado")
-        exit()'''
+        exit()
     
-    getProductInfo("https://www.milkywayediciones.com/products/akane-banashi-vol-6")
     
 
 if __name__ == "__main__":
-    main()
+    #main()
+    test()
