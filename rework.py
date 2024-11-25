@@ -1,3 +1,5 @@
+# This file is part of the "MilkyWay Ediciones Scraper" project.
+
 import httpx
 import asyncio
 import json
@@ -199,7 +201,6 @@ async def main() -> None:
     for i in range(1,100):
         url = f"https://www.milkywayediciones.com/collections/all?page={i}"
         html = await getHTML(url,3)
-        
         
         if html != None:
             urlGenerator = getProductsUrlFromCataloguePage(html)

@@ -33,3 +33,5 @@ Notes
 - The program stops automatically when all catalog pages have been processed.
 
 This tool is useful for collecting product data for analysis or integration into other systems
+
+This file is part of the "MilkyWay Ediciones Scraper" project.
