@@ -1,3 +1,4 @@
+#This file is part of the "MilkyWay Ediciones Scraper" project.
 from dataclasses import dataclass, asdict
 
 @dataclass
