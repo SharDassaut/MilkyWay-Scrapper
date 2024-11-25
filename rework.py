@@ -1,10 +1,10 @@
-from dataclasses import asdict
 import httpx
 import asyncio
 import json
 from product import Product
 from urllib.parse import urljoin
 from selectolax.parser import HTMLParser,Node
+from dataclasses import asdict
 
 DOMAIN_URL = "https://www.milkywayediciones.com"
 
@@ -223,9 +223,6 @@ async def main() -> None:
     else:
         print("0 productos fueron scrapeados")
     
-async def test():
-    pass
-
 if __name__ == "__main__":
     asyncio.run(main())
     #asyncio.run(test())
