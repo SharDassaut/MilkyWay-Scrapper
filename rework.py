@@ -3,6 +3,7 @@
 import httpx
 import asyncio
 import json
+from typing import Generator
 from product import Product
 from urllib.parse import urljoin
 from selectolax.parser import HTMLParser,Node
@@ -103,28 +104,31 @@ def getProductAuthors(html: HTMLParser) -> list:
        authors.append(i.text().lower())
     return authors
 
-def getExtraInfo(html: HTMLParser) -> list:
+def getExtraInfo(html: HTMLParser) -> dict[str:str]:
     extra_info = cssSelector(html,"div.product-main__description p")
-    extra_info = extra_info[-1].text(deep=True, separator =":", strip=True)
-    extra_info = extra_info.split(":")
+    
+    extra_info = (extra_info[-1].text(deep=True, separator =":", strip=True)).split(":")
+    
     while extra_info.count(""):
         extra_info.remove("")
 
-
     if "Booktrailer" in extra_info:
-        extra_info.pop(2)
-        extra_info.remove("Booktrailer")
-        extra_info.remove("https")
+        i = extra_info.index("Booktrailer")+1
+        extra_info[i]= "https:"+extra_info[i+1]
+        extra_info.pop(i+1)
 
     if "/N" in extra_info:
         extra_info[extra_info.index('B')] = "B/N con págs. a color"
         extra_info.remove('/N')
         extra_info.remove('con págs. a color')
 
-    def_extra_info = []
-    for i in range(1,len(extra_info),2):
-        def_extra_info.append(extra_info[i])
-    return def_extra_info
+    extracted_data = {}
+    for i in range(0,len(extra_info),2):
+        data = extra_info[i+1].lower()
+        key = extra_info[i].lower()
+        extracted_data[key] = data
+
+    return extracted_data
 
 def getTags(html: HTMLParser) -> list:
     tags_node = cssSelector(html,"div.product-main__tags a")
@@ -157,12 +161,18 @@ async def getProductInfo(url: str) -> Product | None:
         price = cssFirstTextSelector(html,"div.product-main__price")
         cover_url = urlFixer(cssFirstAtributeSelector(html,"img.product-main--img","src"))
         tags = filterTags(getTags(html),title,authors)
-        try:
-            original_title, format, size, page_number, color, isbn = getExtraInfo(html)
-        except:
-            return Product(title,volume,authors,price,cover_url,tags,None,None,None,None,None,None)
 
-        return Product(title,volume,authors,price,cover_url,tags,original_title,format,size,page_number,color,isbn)
+        extra_info = getExtraInfo(html)
+
+        booktrailer = extra_info.get("booktrailer")
+        original_title = extra_info.get("título original")
+        format = extra_info.get("formato")
+        size = extra_info.get("tamaño")
+        page_number = extra_info.get("páginas")
+        color = extra_info.get("color")
+        isbn = extra_info.get("isbn")
+
+        return Product(title=title, volume=volume ,authors=authors, price=price, cover_url=cover_url, tags=tags, booktrailer=booktrailer, original_title=original_title, format=format, size=size, page_number=page_number, color=color, isbn=isbn)
     else:
         print("No se ha podido recoger los datos del url:",url)
         return None
@@ -172,7 +182,7 @@ async def getProductInfo(url: str) -> Product | None:
 #              all the products of the object                   #
 #################################################################
 
-def getProductsUrlFromCataloguePage(html: HTMLParser) -> str | None:
+def getProductsUrlFromCataloguePage(html: HTMLParser) -> Generator:
     html = (html.css(".product-card-list .product-card"))
     for node in html:
         url= cssFirstAtributeSelector(node, 'a', "href")
@@ -224,6 +234,11 @@ async def main() -> None:
     else:
         print("0 productos fueron scrapeados")
     
+async def test():
+    a = await getProductInfo("https://www.milkywayediciones.com/products/de-fran-a-ilutv")
+    print(a)
+    print("\n\n")
+    print(await getProductInfo("https://www.milkywayediciones.com/products/golden-kamuy-vol-31"))
 if __name__ == "__main__":
-    asyncio.run(main())
-    #asyncio.run(test())
+    #asyncio.run(main())
+    asyncio.run(test())
