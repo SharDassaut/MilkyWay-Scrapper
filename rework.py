@@ -7,7 +7,6 @@ from typing import Generator
 from product import Product
 from urllib.parse import urljoin
 from selectolax.parser import HTMLParser,Node
-from dataclasses import asdict
 
 DOMAIN_URL = "https://www.milkywayediciones.com"
 
@@ -21,7 +20,7 @@ DOMAIN_URL = "https://www.milkywayediciones.com"
 
 async def getHTML(url: str, retries=3) -> HTMLParser | None:
 
-    header={'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0',
+    header={'User-Agent': 'Mozilla/5.0 (Windows; Windows NT 10.2; Win64; x64; en-US) Gecko/20130401 Firefox/55.7',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'Accept-Language': 'en-US,en;q=0.5',
             }
@@ -101,14 +100,13 @@ def getProductAuthors(html: HTMLParser) -> list:
     strs = cssSelector(html,"div.product-main__author a h3")
     authors=[]
     for i in strs:
-       authors.append(i.text().lower())
+       authors.append(i.text())
     return authors
 
-def getExtraInfo(html: HTMLParser) -> dict[str:str]:
-    extra_info = cssSelector(html,"div.product-main__description p")
-    
+
+def clearnExtraInfo(extra_info : list[Node]) -> list[str]:
     extra_info = (extra_info[-1].text(deep=True, separator =":", strip=True)).split(":")
-    
+
     while extra_info.count(""):
         extra_info.remove("")
 
@@ -122,11 +120,21 @@ def getExtraInfo(html: HTMLParser) -> dict[str:str]:
         extra_info.remove('/N')
         extra_info.remove('con págs. a color')
 
+    return extra_info
+
+def getExtraInfo(html: HTMLParser) -> dict[str:str]:
+    extra_info = cssSelector(html,"div.product-main__description p")
+    
+    extra_info = clearnExtraInfo(extra_info)
+
     extracted_data = {}
     for i in range(0,len(extra_info),2):
-        data = extra_info[i+1].lower()
-        key = extra_info[i].lower()
-        extracted_data[key] = data
+        try:
+            data = extra_info[i+1].lower()
+            key = extra_info[i].lower()
+            extracted_data[key] = data
+        except:
+            pass
 
     return extracted_data
 
@@ -143,7 +151,7 @@ def getTags(html: HTMLParser) -> list:
 
 def filterTags(tags: list, title: str, author: str) -> list:
     for tag in tags:
-        if tag.lower() == title.lower() or tag.lower() in author:
+        if tag.lower() == title.lower() or tag in author:
             tags.remove(tag)
     return tags
 
@@ -184,6 +192,8 @@ async def getProductInfo(url: str) -> Product | None:
 
 def getProductsUrlFromCataloguePage(html: HTMLParser) -> Generator:
     html = (html.css(".product-card-list .product-card"))
+    if html == None: return None
+
     for node in html:
         url= cssFirstAtributeSelector(node, 'a', "href")
         if url != None:
@@ -214,6 +224,11 @@ async def main() -> None:
         
         if html != None:
             urlGenerator = getProductsUrlFromCataloguePage(html)
+
+            if urlGenerator == None: 
+                print("Hubo un error de scrapeo")
+                
+                exit()
             tasks = [getProductInfo(productUrl) for productUrl in urlGenerator if productUrl is not None]
             
             results = await asyncio.gather(*tasks)
@@ -235,10 +250,8 @@ async def main() -> None:
         print("0 productos fueron scrapeados")
     
 async def test():
-    a = await getProductInfo("https://www.milkywayediciones.com/products/de-fran-a-ilutv")
-    print(a)
-    print("\n\n")
-    print(await getProductInfo("https://www.milkywayediciones.com/products/golden-kamuy-vol-31"))
+    pass
+
 if __name__ == "__main__":
-    #asyncio.run(main())
-    asyncio.run(test())
+    asyncio.run(main())
+    #asyncio.run(test())
